@@ -18,6 +18,7 @@ End of Week 1. Foundations week — no real product work yet, just setup.
 - `docker` group access set up so I don't need sudo for every command
 - Postgres 16 running in a Docker container via docker-compose
 - Verified end-to-end: `psql` connects to the containerized Postgres, runs queries
+- First read of the Raft paper. Critical to do before W2 starts since W2 expects me to write a 2-page Raft design doc.
 
 ### Where I got stuck (and how I unstuck)
 - **Docker group permissions.** After `usermod -aG docker $USER`, `docker run hello-world`
@@ -48,8 +49,6 @@ End of Week 1. Foundations week — no real product work yet, just setup.
 - Pro Git ch. 1-3 — only skimmed. Need to actually practice rebase, cherry-pick, reflog
   before the conflict-resolution scenarios in W2.
 - Missing Semester lectures 1-2 — same, partially done.
-- First read of the Raft paper. Critical to do before W2 starts since W2 expects me to
-  write a 2-page Raft design doc.
 - Droplet hardening (non-root user, ufw, fail2ban) — deferred to W4 by design, since I
   won't deploy until then.
 
