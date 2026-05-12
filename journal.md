@@ -4,6 +4,39 @@ A running log of work, decisions, things that broke, things I figured out.
 Append-only. Newest entries at the top.
 
 ---
+## Mid-W2 — Tue, May 12, 2026
+
+API now wired to Postgres. Restart-survives-data test passed.
+
+### What I built
+- Postgres-backed `bookmarkStore` using pgx connection pool
+- `INSERT ... RETURNING` for the POST handler (single round-trip, gets the auto-generated ID back)
+- `SELECT ... ORDER BY created_at DESC` for the GET handler
+- Proper error handling: DB failures return 500 to client, log the actual error server-side
+- `req.Context()` passed to DB calls so client disconnects cancel in-flight queries
+- Parameterized queries ($1, $2) — no SQL injection risk
+
+### Where I got stuck
+- Two separate nano paste failures when replacing the in-memory store with the
+  Postgres version. First time, multi-line backtick strings got mangled
+  ("newline in string" errors). Second time, the wipe didn't fully clear the
+  file, so the new code merged with leftover old code and the `Bookmark` struct
+  definition went missing.
+- Fix: `rm main.go && touch main.go` to forcibly recreate, then verify with
+  `wc -l` and `grep` BEFORE running. Saved another compile-error cycle.
+
+### Lessons
+- Verify before running. `grep` for key types/imports after pasting saves
+  failed compile cycles.
+- Read errors carefully — "newline in string" was a precise clue about
+  what got corrupted; I should have spotted it faster.
+
+### What's left for W2
+- Pro Git ch. 1-3 deep practice (rebase, conflicts, reflog) — still half-done
+- Missing Semester lectures 4-6 — partially done
+- 2-page Raft design doc — not started
+- ~3 days left in W2
+
 
 ## W1 Wrap-up — Thu, May 8, 2026
 
