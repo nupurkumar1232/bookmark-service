@@ -3,6 +3,36 @@
 A running log of work, decisions, things that broke, things I figured out.
 Append-only. Newest entries at the top.
 
+## Late W3 / Pre-W4 — Sun, May 24, 2026
+
+Auth stack complete. End of W3 bookmark work.
+
+### What I shipped
+- Users table + foreign key + index on bookmarks.user_id
+- /signup with bcrypt password hashing (cost 10)
+- /login with constant-time hash comparison + JWT generation
+- authMiddleware: extracts JWT, verifies signature, checks algorithm, puts user_id in context
+- Per-user data scoping: Alice and Bob each see only their own bookmarks
+- JWT secret in .env (not committed), 32-byte base64-random secret
+
+### Where I got stuck
+- Forgot `errors` import — caught by compile error pointing at exact line
+- Pasted command placeholders (`<YOUR_JWT>`) literally without substituting twice
+- Accidentally ran curl with -d but no -X POST — created a duplicate bookmark
+  (curl implicitly switches to POST when -d is present)
+
+### What I learned
+- Postgres SERIAL doesn't reset on DELETE — IDs can have gaps, don't expect them contiguous
+- JWT timing attacks: bcrypt comparison is slow, DB-miss is fast. Real production would
+  do a dummy bcrypt even on user-not-found to equalize timing.
+- The "alg confusion" attack on JWT — always check the signing algorithm in the
+  verification callback, never trust the alg from the header alone.
+
+### What's next (W4)
+- Deploy to a DigitalOcean droplet (need to claim Student Pack credit if not active)
+- Nginx reverse proxy + Let's Encrypt HTTPS
+- Domain from Namecheap (.me, free with Student Pack)
+- ALL of this is new territory — first real deployment
 ---
 ## Mid-W2 — Tue, May 12, 2026
 
