@@ -3,6 +3,40 @@
 A running log of work, decisions, things that broke, things I figured out.
 Append-only. Newest entries at the top.
 
+## W6 Day 1 — Thu, Jun 4, 2026 — Live on the public internet
+
+Bookmark service is deployed to DigitalOcean droplet at 167.71.232.37:8080.
+Containerized Go app + Postgres running via docker compose. Hardened SSH,
+ufw, fail2ban. Verified end-to-end signup from my laptop hitting the
+public IP.
+
+### What worked
+- Multi-stage Dockerfile, final image ~15 MB
+- Internal Docker network for app <-> postgres
+- Postgres healthcheck gating app startup
+- JWT secret read from .env, never committed
+- ufw only allows 22 and 8080 to the internet; postgres reachable
+  only inside the Docker network
+
+### What took longer than expected
+- DigitalOcean payment friction (Indian debit card declined repeatedly,
+  ~6 hrs lost, ultimately PayPal/family card resolved it)
+- Spelling typos on path names (bookmark-serivce, etc.) and editing
+  files in the wrong directory (nano main.go in $HOME instead of project)
+- Accidentally pasted JWT secret in chat, had to rotate it
+
+### What's next
+- Nginx reverse proxy in front of the Go app (so port 80 hits 8080 internally)
+- Domain from Namecheap (.me, free with Student Pack)
+- Let's Encrypt SSL cert, automated renewal
+- After all that: /health and /bookmarks reachable at https://<domain>
+
+### W4-W5 status
+W4 deliverable was "API live on a public HTTPS domain." Right now I have
+HTTP, no HTTPS — about 80% of W4 done one week late. W5 (observability)
+is untouched, deferred. Plan slipping by ~1 week net. Acceptable given
+the payment-method friction was outside my control.
+
 ## Late W3 / Pre-W4 — Sun, May 24, 2026
 
 Auth stack complete. End of W3 bookmark work.
