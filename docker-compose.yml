@@ -6,10 +6,26 @@ services:
       POSTGRES_USER: bookmark
       POSTGRES_PASSWORD: localdev
       POSTGRES_DB: bookmarks
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bookmark -d bookmarks"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    container_name: bookmark-app
+    environment:
+      DATABASE_URL: postgres://bookmark:localdev@postgres:5432/bookmarks?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
