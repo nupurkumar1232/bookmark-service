@@ -22,7 +22,7 @@ services:
       DATABASE_URL: postgres://bookmark:localdev@postgres:5432/bookmarks?sslmode=disable
       JWT_SECRET: ${JWT_SECRET}
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
