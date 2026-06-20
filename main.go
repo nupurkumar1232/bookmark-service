@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -14,8 +15,64 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"golang.org/x/crypto/bcrypt"
 )
+
+var (
+	httpRequestsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "http_requests_total",
+			Help: "Total number of HTTP requests, labeled by method, path, and status code",
+		},
+		[]string{"method", "path", "status"},
+	)
+
+	httpRequestDuration = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_request_duration_seconds",
+			Help:    "HTTP request latency in seconds, labeled by method and path",
+			Buckets: []float64{0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2, 5},
+		},
+		[]string{"method", "path"},
+	)
+
+	httpRequestsInFlight = promauto.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "http_requests_in_flight",
+			Help: "Number of HTTP requests currently being processed",
+		},
+	)
+)
+
+// metricsMiddleware records metrics for each HTTP request.
+func metricsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		start := time.Now()
+		httpRequestsInFlight.Inc()
+		defer httpRequestsInFlight.Dec()
+
+		// Wrap ResponseWriter to capture the status code
+		ww := middleware.NewWrapResponseWriter(w, req.ProtoMajor)
+
+		next.ServeHTTP(ww, req)
+
+		// Use the chi route pattern (e.g. "/bookmarks") instead of the full URL
+		// so we don't explode cardinality with paths like /bookmarks/123.
+		routePattern := chi.RouteContext(req.Context()).RoutePattern()
+		if routePattern == "" {
+			routePattern = "unknown"
+		}
+
+		duration := time.Since(start).Seconds()
+		status := strconv.Itoa(ww.Status())
+
+		httpRequestsTotal.WithLabelValues(req.Method, routePattern, status).Inc()
+		httpRequestDuration.WithLabelValues(req.Method, routePattern).Observe(duration)
+	})
+}
 
 type Bookmark struct {
 	ID        int       `json:"id"`
@@ -221,6 +278,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
+	r.Use(metricsMiddleware)
 
 	r.Get("/", func(w http.ResponseWriter, req *http.Request) {
 		w.Write([]byte("Bookmark service is running\n"))
@@ -229,6 +287,8 @@ func main() {
 	r.Get("/health", func(w http.ResponseWriter, req *http.Request) {
 		w.Write([]byte("ok\n"))
 	})
+
+	r.Handle("/metrics", promhttp.Handler())
 
 	r.Post("/signup", func(w http.ResponseWriter, req *http.Request) {
 		var body signupRequest
