@@ -3,6 +3,46 @@
 A running log of work, decisions, things that broke, things I figured out.
 Append-only. Newest entries at the top.
 
+## W7 Day 6 — Tue, Jun 16, 2026 — Prometheus in production
+
+The Go app now emits Prometheus metrics; Prometheus scrapes them every 15s.
+Both running on the droplet.
+
+### What works end-to-end
+- `/metrics` endpoint on the Go app exposes:
+  - `http_requests_total{method,path,status}` — counter
+  - `http_request_duration_seconds{method,path}` — histogram
+  - `http_requests_in_flight` — gauge
+- Custom Go middleware records all of the above per request
+- Route patterns used instead of raw URLs, so cardinality stays bounded
+  (random 404s all bucket into `path="unknown"`)
+- Prometheus container running on the droplet, bound to 127.0.0.1:9090 only
+- Prometheus + app on same Docker network, target health: up
+
+### Where I got stuck (good lesson)
+Spent ~90 min debugging why Prometheus couldn't reach /metrics. Diagnostic
+path was: assume DNS issue → assume stale build → assume rebuild didn't take.
+
+Actual cause: my laptop commits with the Prometheus changes were never pushed
+to GitHub. The droplet had pushed earlier deploy commits I never pulled to
+my laptop. So `git pull` on the droplet found nothing new, the rebuild used
+old code, /metrics didn't exist, Prometheus got 404.
+
+Fix was: git reset --hard origin/main + cherry-pick the Prometheus commit
+onto GitHub's current HEAD, then push clean, then pull on the droplet.
+
+Lesson: ALWAYS git pull at the start of work, especially when switching
+between laptop and droplet.
+
+### What's next
+- Grafana container, point it at Prometheus
+- Actual dashboards (request rate, error rate, p95 latency, DB pool)
+- alerts.md describing what I'd alert on in a real setup
+
+### Time accounting
+W5 piece 1+2 done. Piece 3+4+5 deferred to tomorrow.
+
+
 ## W6 Day 1 — Thu, Jun 4, 2026 — Live on the public internet
 
 Bookmark service is deployed to DigitalOcean droplet at 167.71.232.37:8080.
