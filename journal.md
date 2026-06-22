@@ -3,6 +3,39 @@
 A running log of work, decisions, things that broke, things I figured out.
 Append-only. Newest entries at the top.
 
+
+## Sun, Jun 22, 2026 — W5 complete
+
+All 5 pieces of W5 monitoring work done.
+
+### What's running on the droplet
+- Go app emitting /metrics (request counter, latency histogram, in-flight gauge)
+- Prometheus scraping every 15s, storing time-series data
+- Grafana dashboard with 4 panels:
+  - Request rate by status code
+  - Error rate (5xx %)
+  - p95 latency by endpoint
+  - Requests in flight
+- alerts.md documenting 4 alert conditions with PromQL + runbook
+
+### Interesting observation from the metrics
+Already seeing bot traffic in Prometheus data — 34 requests to unknown paths
+(404s), 11 POST 405s, 3 WebDAV PROPFIND scans. All bucketed under
+path="unknown" so cardinality stays bounded regardless of what bots try.
+The error rate panel shows ~60-80% "error" rate because bots dominate traffic
+over legit requests — would filter to 5xx-only in a real setup.
+
+### Where I am vs plan
+- W4 (deploy + HTTPS): DONE
+- W5 (monitoring): DONE today
+- W6 (deliberate breakage): NEXT
+- W7 (CI/CD): NEXT
+- W8-W10: not started
+Plan still behind but closing. ~20 days left until Jul 12 checkpoint.
+
+
+
+
 ## W7 Day 6 — Tue, Jun 16, 2026 — Prometheus in production
 
 The Go app now emits Prometheus metrics; Prometheus scrapes them every 15s.
