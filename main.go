@@ -284,15 +284,9 @@ func main() {
 		w.Write([]byte("Bookmark service is running\n"))
 	})
 
-/*	r.Get("/health", func(w http.ResponseWriter, req *http.Request) {
+	r.Get("/health", func(w http.ResponseWriter, req *http.Request) {
 		w.Write([]byte("ok\n"))
 	})
-*/
-
-	r.Get("/health", func(w http.ResponseWriter, req *http.Request) {
-     		time.Sleep(800 * time.Millisecond) // simulate slowness
-       		w.Write([]byte("ok\n"))
-  	 })
 
 	r.Handle("/metrics", promhttp.Handler())
 
