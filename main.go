@@ -281,7 +281,7 @@ func main() {
 	r.Use(metricsMiddleware)
 
 	r.Get("/", func(w http.ResponseWriter, req *http.Request) {
-		w.Write([]byte("Bookmark service is running\n"))
+		w.Write([]byte("Bookmark service is running (deployed via CI/CD)\n"))
 	})
 
 	r.Get("/health", func(w http.ResponseWriter, req *http.Request) {
