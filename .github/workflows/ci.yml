@@ -50,3 +50,22 @@ jobs:
 
       - name: Build Docker image
         run: docker build -t bookmark-service:${{ github.sha }} .
+
+deploy:
+    runs-on: ubuntu-latest
+    needs: [test, docker-build]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script: |
+            cd ~/bookmark-service
+            git pull origin main
+            docker compose up -d --build app
+            sleep 10
+            curl -f http://localhost:8080/health || (echo "Health check failed!" && exit 1)
+            echo "Deploy succeeded"
