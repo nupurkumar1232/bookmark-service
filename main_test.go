@@ -17,7 +17,7 @@ func TestHealthEndpoint(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("expected status 418, got %d", status)
+		t.Errorf("expected status 200, got %d", status)
 	}
 
 	if body := rr.Body.String(); body != "ok\n" {
