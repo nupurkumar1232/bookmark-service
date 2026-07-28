@@ -263,7 +263,13 @@ func main() {
 		dbURL = "postgres://bookmark:localdev@localhost:5432/bookmarks?sslmode=disable"
 	}
 
-	pool, err := pgxpool.New(context.Background(), dbURL)
+	config, err := pgxpool.ParseConfig(dbURL)
+	if err != nil {
+		log.Fatalf("failed to parse DB URL: %v", err)
+	}
+	config.MaxConns = 20
+	config.MinConns = 5
+	pool, err := pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {
 		log.Fatalf("failed to create connection pool: %v", err)
 	}
@@ -287,6 +293,16 @@ func main() {
 	})
 
 	r.Get("/health", func(w http.ResponseWriter, req *http.Request) {
+		// Quick DB check — should be < 100ms
+		ctx, cancel := context.WithTimeout(req.Context(), 2*time.Second)
+		defer cancel()
+
+		if err := pool.Ping(ctx); err != nil {
+			log.Printf("health check: DB ping failed: %v", err)
+			http.Error(w, "database unavailable", http.StatusServiceUnavailable)
+			return
+		}
+
 		w.Write([]byte("ok\n"))
 	})
 
@@ -307,7 +323,7 @@ func main() {
 			return
 		}
 
-		hash, err := bcrypt.GenerateFromPassword([]byte(body.Password), bcrypt.DefaultCost)
+		hash, err := bcrypt.GenerateFromPassword([]byte(body.Password), 8)
 		if err != nil {
 			log.Printf("bcrypt error: %v", err)
 			http.Error(w, "internal server error", http.StatusInternalServerError)
