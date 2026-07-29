@@ -270,6 +270,7 @@ func main() {
 	config.MaxConns = 20
 	config.MinConns = 5
 	pool, err := pgxpool.NewWithConfig(context.Background(), config)
+
 	if err != nil {
 		log.Fatalf("failed to create connection pool: %v", err)
 	}
