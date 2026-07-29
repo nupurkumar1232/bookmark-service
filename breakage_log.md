@@ -5,6 +5,57 @@ what I'd do differently next time.
 
 ---
 
+## W9 Chunk 2: Bottleneck fix + re-test (2026-07-29)
+
+### Changes applied
+- bcrypt cost 10 → 8 (~4x faster per hash: ~100ms → ~25ms)
+- pgxpool MaxConns 4 → 20, MinConns 5
+
+### Results comparison (all with rate limits raised for testing)
+
+| Metric | Baseline | After fix | Change |
+|---|---|---|---|
+| p95 latency | 587ms | 506ms | -14% |
+| Success rate | 92% | 93% | +1% |
+| Signup success | 95% | 97% | +2% |
+| Login success | 88% | 89% | +1% |
+| Throughput | 15 req/s | 14.6 req/s | ~flat |
+| Median latency | 120ms | 157ms | +30% (slightly worse) |
+
+### Honest interpretation
+The improvement was modest, not the 4x I predicted. bcrypt is A bottleneck
+but not THE dominant one. Median actually got slightly worse — probably
+because MinConns=5 means more warm connections held open, which isn't
+free.
+
+### Real bottleneck hypothesis
+The service ceiling on this droplet appears to be ~15 req/s regardless
+of bcrypt cost. Reasons:
+- Single vCPU on $6/mo droplet
+- Every signup + login requires bcrypt (still ~25ms each after fix)
+- 30 concurrent VUs on 1 CPU means requests queue on CPU
+- Nginx defaults to 1 worker process
+- max latency of 1 second in this run shows a real tail
+
+Fixing this properly would mean vertical scaling (bigger droplet) or
+horizontal (multiple app instances behind a load balancer). Both are
+outside the scope of a $6/month personal project.
+
+### What I'd do next in a real production setting
+1. Move signup/login to an async job queue (users wait longer but don't
+   queue on CPU-bound tasks in the request path)
+2. Rate limit at Nginx (which I already do — 5/min signup) so peak load
+   never reaches the app
+3. Vertical scale for a hard traffic peak
+4. Add Postgres read replicas if reads dominate (they don't for us)
+
+### Rate limits reverted to production values
+signup: 5/min, general: 60/min per IP. This is the actual production
+behavior. The load test used raised limits to observe internal
+bottlenecks.
+
+
+
 Chunk 1: Kill Postgres while app is running (~45 min)
 Hypothesis to test: "If Postgres dies, my Go app should return 500s on bookmark endpoints, but /health should still return 200."
 Why this matters: A common production pattern is /health checks database connectivity. If yours doesn't, load balancers won't know to route traffic away from a broken instance. We'll observe this gap and decide whether to fix it.
